@@ -3,6 +3,7 @@ const router = express.Router();
 import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import jwt_decode from 'jwt-decode';
 import { body, validationResult } from 'express-validator';
 
 // const { validate } = require('../models/User');
@@ -98,7 +99,7 @@ router.post('/login',[
 router.post('/getuser',fetchuser, async (req,res)=>{
   
   try{
-    userId=req.user.id;
+    let userId=req.user.id;
     const user= await User.findById(userId).select("-password");
     res.send(user);
   }
@@ -108,6 +109,35 @@ router.post('/getuser',fetchuser, async (req,res)=>{
   }
 
 });
+
+router.post('/google/signIn', async(req,res)=>{
+
+  try {
+    const { name,email } = req.body;
+    let user = await User.findOne({ email });
+
+    if (!user) {
+        const salt = await bcrypt.genSalt(10);
+        const secPass = await bcrypt.hash("helloAbhi", salt);
+        user = await User.create({
+        name: name,
+        password: secPass,
+        email: email
+      });
+    }
+    const data = {
+      user: {
+        id: user.id
+      }
+    }
+    const authToken = jwt.sign(data, JWT_SECRET);
+    res.json({ authToken });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json().send({ Success: success, error: "some internal server error occured" })
+  }
+
+})
 
 export default router;
 
